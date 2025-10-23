@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condominium Management Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <style>
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #global-loader {
+            position: fixed; inset: 0; background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px); z-index: 9999; display: flex;
+            align-items: center; justify-content: center;
+        }
+        .star-rating input[type="radio"] { display: none; }
+        .star-rating .star-icon { 
+            color: #d1d5db; 
+            cursor: pointer; 
+        }
+        .star-rating .star-icon.filled { 
+            color: #f59e0b; 
+            fill: #f59e0b; 
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <div id="global-loader">
+        <svg class="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+    </div>
+
+    <div id="error-message-box" class="app-view hidden fixed top-5 right-5 w-full max-w-sm bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg z-50" role="alert">
+        <strong class="font-bold flex items-center">
+            <i data-feather="alert-circle" class="w-5 h-5 mr-2"></i>Error: 
+        </strong>
+        <span class="block sm:inline ml-2" id="error-message-text"></span>
+        <span class="absolute top-0 bottom-0 right-0 px-4 py-3" onclick="document.getElementById('error-message-box').style.display = 'none';">
+            <svg class="fill-current h-6 w-6 text-red-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Close</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 2.03a1.2 1.2 0 1 1-1.697-1.697L8.18 10 5.53 7.349a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-2.03a1.2 1.2 0 1 1 1.697 1.697L11.819 10l2.651 2.651a1.2 1.2 0 0 1 0 1.698z"/></svg>
+        </span>
+    </div>
+
+    <div id="success-message-box" class="app-view hidden fixed top-5 right-5 w-full max-w-sm bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-lg z-50" role="alert">
+        <strong class="font-bold flex items-center">
+            <i data-feather="check-circle" class="w-5 h-5 mr-2"></i>Success!
+        </strong>
+        <span class="block sm:inline ml-2" id="success-message-text"></span>
+        <span class="absolute top-0 bottom-0 right-0 px-4 py-3" onclick="document.getElementById('success-message-box').style.display = 'none';">
+            <svg class="fill-current h-6 w-6 text-green-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Close</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 2.03a1.2 1.2 0 1 1-1.697-1.697L8.18 10 5.53 7.349a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-2.03a1.2 1.2 0 1 1 1.697 1.697L11.819 10l2.651 2.651a1.2 1.2 0 0 1 0 1.698z"/></svg>
+        </span>
+    </div>
+
+    <div id="role-selection-view" class="app-view min-h-screen flex items-center justify-center p-6 bg-gradient-to-b from-white to-gray-50">
+        <div class="w-full max-w-md text-center">
+            <img src="splash_logo.png" alt="RGS Logo" class="w-32 h-32 mx-auto mb-6 rounded-full shadow-lg">
+            <h1 class="text-3xl font-bold text-gray-800 mb-4">Welcome!</h1>
+            <p class="text-lg text-gray-600 mb-10">Please select your role to continue.</p>
+            <div class="space-y-4">
+                <button onclick="handleRoleSelect('OWNER')" class="w-full bg-blue-600 text-white font-semibold py-4 px-6 rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out transform hover:-translate-y-1 flex items-center justify-center space-x-3">
+                    <i data-feather="home"></i>
+                    <span>I am a Flat Owner</span>
+                </button>
+                <button onclick="handleRoleSelect('MANAGER')" class="w-full bg-purple-600 text-white font-semibold py-4 px-6 rounded-lg shadow-md hover:bg-purple-700 transition duration-300 ease-in-out transform hover:-translate-y-1 flex items-center justify-center space-x-3">
+                    <i data-feather="sliders"></i>
+                    <span>I am a Condominium Manager</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-view" class="app-view hidden min-h-screen flex items-center justify-center p-6 bg-gray-50">
+        <div class="w-full max-w-sm bg-white p-8 rounded-xl shadow-2xl">
+            <button onclick="showView('role-selection-view')" class="text-gray-500 hover:text-gray-700 mb-4 flex items-center space-x-2">
+                <i data-feather="arrow-left" class="w-5 h-5"></i>
+                <span>Back to Role Selection</span>
+            </button>
+            <h2 id="login-title" class="text-3xl font-bold text-center text-gray-800 mb-6">Login</h2>
+            <form id="login-form">
+                <div class="mb-5">
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="email" value="" placeholder="user@example.com" required class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="password" value="" placeholder="••••••••" required class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <button type="submit" class="w-full text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center" id="login-button">
+                    <span id="login-button-text">Login</span>
+                    <svg id="login-loader" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="owner-dashboard-view" class="app-view hidden">
+        <header class="bg-blue-600 text-white shadow-md sticky top-0 z-30">
+            <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+                <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">My Flats</h1>
+                <button onclick="handleLogout()" class="font-semibold hover:bg-blue-700 px-3 py-1 rounded-lg flex items-center space-x-2">
+                    <i data-feather="log-out" class="w-5 h-5"></i>
+                    <span>Logout</span>
+                </button>
+            </nav>
+        </header>
+        <main class="container mx-auto p-6">
+            <p class="text-lg text-gray-700 mb-6">Select a flat to view cleaning reports.</p> 
+            <div id="owner-dashboard-loader" class="text-center py-10">
+                <svg class="animate-spin h-8 w-8 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-2 text-gray-600">Loading your flats...</p>
+            </div>
+            <div id="owner-flats-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            </div>
+        </main>
+    </div>
+
+    <div id="manager-dashboard-view" class="app-view hidden">
+        <header class="bg-purple-600 text-white shadow-md sticky top-0 z-30">
+            <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+                <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Review Cleaning Reports</h1>
+                <button onclick="handleLogout()" class="font-semibold hover:bg-purple-700 px-3 py-1 rounded-lg flex items-center space-x-2">
+                    <i data-feather="log-out" class="w-5 h-5"></i>
+                    <span>Logout</span>
+                </button>
+            </nav>
+        </header>
+        <main class="container mx-auto p-6">
+            <div id="manager-condo-list" class="mb-6 bg-white p-4 rounded-lg shadow">
+                <h2 class="text-xl font-semibold text-gray-800 mb-3">Your Assigned Condominiums:</h2>
+                <div id="manager-condo-names" class="flex flex-wrap gap-2">
+                </div>
+            </div>
+            <p class="text-lg text-gray-700 mb-6">Here are all reports for the condominiums you manage. Review pending reports or add complaints/notes.</p>
+            
+            <div class="mb-4 p-4 bg-white rounded-lg shadow flex flex-col md:flex-row items-start md:items-center md:space-x-4 space-y-4 md:space-y-0 flex-wrap">
+                <h3 class="text-lg font-semibold text-gray-700 flex-shrink-0 flex items-center">
+                    <i data-feather="filter" class="w-4 h-4 mr-2"></i>Filter Reports:
+                </h3>
+                <div class="w-full md:w-auto">
+                    <label for="filter-year" class="block text-sm font-medium text-gray-600">Year</label>
+                    <select id="filter-year" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md shadow-sm">
+                    </select>
+                </div>
+                <div class="w-full md:w-auto">
+                    <label for="filter-month" class="block text-sm font-medium text-gray-600">Month</label>
+                    <select id="filter-month" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md shadow-sm">
+                        <option value="ALL">All Months</option>
+                        <option value="0">January</option>
+                        <option value="1">February</option>
+                        <option value="2">March</option>
+                        <option value="3">April</option>
+                        <option value="4">May</option>
+                        <option value="5">June</option>
+                        <option value="6">July</option>
+                        <option value="7">August</option>
+                        <option value="8">September</option>
+                        <option value="9">October</option>
+                        <option value="10">November</option>
+                        <option value="11">December</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div id="manager-dashboard-loader" class="text-center py-10">
+                <svg class="animate-spin h-8 w-8 text-purple-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-2 text-gray-600">Loading reports...</p>
+            </div>
+            <div id="manager-reports-list" class="space-y-6">
+            </div>
+        </main>
+    </div>
+
+    <div id="report-details-view" class="app-view hidden">
+        <header class="bg-blue-600 text-white shadow-md sticky top-0 z-30">
+            <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+                <button onclick="goBackToOwnerDashboard()" class="font-semibold hover:bg-blue-700 px-3 py-1 rounded-lg flex items-center space-x-2">
+                    <i data-feather="arrow-left" class="w-5 h-5"></i>
+                    <span>Back to My Flats</span>
+                </button>
+                <h1 id="report-details-title" class="text-2xl sm:text-3xl font-bold tracking-tight text-center">Cleaning Reports</h1>
+                <button onclick="handleLogout()" class="font-semibold hover:bg-blue-700 px-3 py-1 rounded-lg flex items-center space-x-2">
+                    <i data-feather="log-out" class="w-5 h-5"></i>
+                    <span>Logout</span>
+                </button>
+            </nav>
+        </header>
+        <main class="container mx-auto p-6">
+            <div id="report-details-loader" class="text-center py-10">
+                 <svg class="animate-spin h-8 w-8 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-2 text-gray-600">Loading reports...</p>
+            </div>
+            <div id="report-list-container" class="space-y-6">
+            </div>
+        </main>
+    </div>
+
+    <div id="complaint-view" class="app-view hidden">
+        <header class="bg-purple-600 text-white shadow-md sticky top-0 z-30">
+            <nav class="container mx-auto px-6 py-4 flex justify-between items-center"> 
+                <button onclick="goBackToManagerDashboard()" class="font-semibold hover:bg-purple-700 px-3 py-1 rounded-lg flex items-center space-x-2"> 
+                    <i data-feather="arrow-left" class="w-5 h-5"></i>
+                    <span>Back to Dashboard</span>
+                </button>
+                <h1 id="complaint-view-title" class="text-2xl sm:text-3xl font-bold tracking-tight text-center">Complaints / Notes</h1>
+                <button onclick="handleLogout()" class="font-semibold hover:bg-purple-700 px-3 py-1 rounded-lg flex items-center space-x-2">
+                    <i data-feather="log-out" class="w-5 h-5"></i>
+                    <span>Logout</span>
+                </button>
+            </nav>
+        </header>
+        <main class="container mx-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-white p-6 rounded-2xl shadow-lg">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Add New Note / Complaint</h2>
+                <form id="complaint-form">
+                    <div class="mb-4">
+                        <label for="complaint-text" class="block text-sm font-medium text-gray-700 mb-1">Details:</label>
+                        <textarea id="complaint-text" rows="5" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" placeholder="Enter note or complaint details..."></textarea>
+                    </div>
+                    <input type="hidden" id="complaint-condo-id">
+                    <button type="submit" id="submit-complaint-btn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition duration-300 flex items-center justify-center">
+                        <span id="complaint-btn-text">Add Note / Complaint</span>
+                        <svg id="complaint-loader" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-lg">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Previous Complaints & Notes</h2>
+                <div id="complaint-list-loader" class="text-center py-10">
+                     <svg class="animate-spin h-8 w-8 text-purple-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="mt-2 text-gray-600">Loading history...</p>
+                </div>
+                <div id="complaint-list-container" class="space-y-4 max-h-96 overflow-y-auto">
+                </div>
+            </div>
+        </main>
+    </div>
+
+
+    <script type="module">
+        import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import {
+            getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import {
+            getFirestore, doc, getDoc, collection, query, where, orderBy, onSnapshot,
+            addDoc, collectionGroup, updateDoc, Timestamp
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // Firebase Config
+        const firebaseConfig = {
+          apiKey: "AIzaSyAxyGsVS9cuuv2bkwWKcj3ZgQPzIA5T15w",
+          authDomain: "plats-83345.firebaseapp.com",
+          projectId: "plats-83345",
+          storageBucket: "plats-83345.appspot.com", 
+          messagingSenderId: "619656775053",
+          appId: "1:619656775053:web:25249b178c03afba52e9c4",
+          measurementId: "G-WKPK539FW6"
+        };
+
+        // Initialize Firebase
+        let app, auth, db;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } catch (e) {
+            console.error("Firebase initialization failed:", e);
+            showError("Could not connect. Check configuration.");
+            hideLoader();
+        }
+
+        // Global State
+        const appState = {
+            currentRole: null, 
+            currentUserRole: null, 
+            currentUserName: null,
+            unsubscribers: [], 
+            filterYear: 'ALL',
+            filterMonth: 'ALL'
+        };
+
+        let reportListeners = [];
+        let allReports = {}; 
+
+        // --- HELPER FUNCTIONS ---
+
+        function showView(viewId) {
+            document.querySelectorAll('.app-view').forEach(view => {
+                view.classList.add('hidden');
+                view.classList.remove('flex', 'block');
+            });
+            const viewToShow = document.getElementById(viewId);
+            if (viewToShow) {
+                viewToShow.classList.remove('hidden');
+                if (viewId === 'role-selection-view' || viewId === 'login-view') {
+                    viewToShow.classList.add('flex');
+                } else if (!['error-message-box', 'success-message-box'].includes(viewId)) {
+                    viewToShow.classList.add('block');
+                }
+                viewToShow.classList.add('fade-in');
+            }
+            feather.replace();
+        }
+
+        function showLoader() { document.getElementById('global-loader').style.display = 'flex'; }
+        function hideLoader() { document.getElementById('global-loader').style.display = 'none'; }
+        
+        function showLoginLoader(show) { 
+            document.getElementById('login-loader').style.display = show ? 'block' : 'none';
+            document.getElementById('login-button-text').style.display = show ? 'none' : 'block';
+            document.getElementById('login-button').disabled = show;
+        }
+        
+        function showError(message) { 
+            console.error(message);
+            document.getElementById('error-message-text').innerText = message;
+            document.getElementById('error-message-box').style.display = 'block';
+            feather.replace();
+            setTimeout(() => { document.getElementById('error-message-box').style.display = 'none'; }, 5000);
+        }
+        
+        function showSuccess(message) { 
+            document.getElementById('success-message-text').innerText = message;
+            document.getElementById('success-message-box').style.display = 'block';
+            feather.replace();
+            setTimeout(() => { document.getElementById('success-message-box').style.display = 'none'; }, 3000);
+        }
+
+        function clearReportListeners() { reportListeners.forEach(unsub => unsub()); reportListeners = []; }
+        function clearAllListeners() { clearReportListeners(); appState.unsubscribers.forEach(unsub => unsub()); appState.unsubscribers = []; }
+
+        function translateTask(taskKey) { 
+            const translations={'stairsCleaned':'Stairs Cleaned','windowsCleaned':'Windows Cleaned','handrailsSanitized':'Handrails Sanitized','landingsSwept':'Landings Swept','elevatorCleaned':'Elevator Cleaned','outdoorAreaCleaned':'Outdoor Area Cleaned','trashBinsEmptied':'Trash Bins Emptied'};
+            if(taskKey.startsWith('other:'))return`Other: ${taskKey.substring(6)}`;
+            return translations[taskKey]||taskKey;
+        }
+
+        // --- 1. AUTHENTICATION ---
+
+        onAuthStateChanged(auth, async (user) => {
+            clearAllListeners();
+            if (user) {
+                showLoader();
+                try {
+                    const userDocRef = doc(db, "users", user.uid);
+                    const userDoc = await getDoc(userDocRef);
+                    if (!userDoc.exists()) throw new Error("User profile not found.");
+
+                    const userData = userDoc.data();
+                    const dbRole = userData.role?.toUpperCase();
+                    appState.currentUserRole = dbRole;
+                    appState.currentUserName = userData.ownerName || userData.managerName || "User";
+
+                    if (appState.currentRole && (!dbRole || !dbRole.includes(appState.currentRole))) {
+                        throw new Error(`Role mismatch: Selected ${appState.currentRole}, logged in as ${dbRole || 'USER'}.`);
+                    }
+
+                    if (dbRole?.includes('OWNER')) {
+                        renderOwnerDashboard(user.uid);
+                        showView('owner-dashboard-view');
+                    } else if (dbRole?.includes('MANAGER')) {
+                        renderManagerDashboard(user.uid);
+                        showView('manager-dashboard-view');
+                    } else {
+                        throw new Error(`Role '${userData.role}' not supported.`);
+                    }
+                } catch (err) {
+                    showError(err.message + " Logging out."); 
+                    await signOut(auth);
+                } finally {
+                    hideLoader();
+                }
+            } else {
+                appState.currentRole = null; 
+                appState.currentUserRole = null; 
+                appState.currentUserName = null;
+                appState.filterYear = 'ALL';
+                appState.filterMonth = 'ALL';
+                showView('role-selection-view'); 
+                hideLoader();
+            }
+        });
+
+        // --- 2. EVENT HANDLERS ---
+
+        window.handleRoleSelect = (role) => { 
+            appState.currentRole = role; 
+            renderLoginView(role); 
+            showView('login-view'); 
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => { 
+             e.preventDefault(); 
+             if (!appState.currentRole) { showError("Select role first."); showView('role-selection-view'); return; }
+             showLoginLoader(true); 
+             const email = document.getElementById('email').value; 
+             const password = document.getElementById('password').value;
+             try { 
+                 await signInWithEmailAndPassword(auth, email, password); 
+             } catch (err) { 
+                 showError(err.message); 
+             } finally { 
+                 showLoginLoader(false); 
+             }
+        });
+
+        window.handleLogout = async () => { 
+            showLoader(); 
+            await signOut(auth); 
+        }
+
+        window.handleViewFlatReports = (flatId, flatName) => {
+            document.getElementById('report-details-title').innerText = `Reports for ${flatName}`;
+            renderReportDetailsView(flatId); 
+            showView('report-details-view');
+        }
+
+        window.handleViewFlatComplaints = (flatId, flatName) => {
+            document.getElementById('complaint-view-title').innerText = `Complaints/Notes for ${flatName}`;
+            renderComplaintView(flatId, flatName);
+            showView('complaint-view');
+        }
+
+        window.goBackToOwnerDashboard = () => {
+            const oldUnsub = appState.unsubscribers.pop(); if (oldUnsub) oldUnsub();
+            if (auth.currentUser) renderOwnerDashboard(auth.currentUser.uid);
+            showView('owner-dashboard-view');
+        }
+
+        window.goBackToManagerDashboard = () => {
+            const oldUnsub = appState.unsubscribers.pop(); if (oldUnsub) oldUnsub();
+            if (auth.currentUser) renderManagerDashboard(auth.currentUser.uid); 
+            showView('manager-dashboard-view');
+        }
+
+        // --- 3. DYNAMIC RENDERING ---
+
+        function renderLoginView(role) { 
+            const title=document.getElementById('login-title'); 
+            const button=document.getElementById('login-button'); 
+            const emailInput=document.getElementById('email');
+            if(role==='OWNER'){
+                title.innerText='Flat Owner Login';
+                button.className='w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 hover:bg-blue-700 flex items-center justify-center';
+                emailInput.value='';
+                emailInput.placeholder='owner@example.com';
+            }
+            else{
+                title.innerText='Manager Login';
+                button.className='w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 hover:bg-purple-700 flex items-center justify-center';
+                emailInput.value='';
+                emailInput.placeholder='manager@example.com';
+            }
+        }
+
+        function renderOwnerDashboard(userId) {
+            const listContainer = document.getElementById('owner-flats-list');
+            const loader = document.getElementById('owner-dashboard-loader');
+            loader.style.display = 'block';
+            clearAllListeners();
+            
+            const q = query(collection(db, "condominiums"), where("ownerId", "==", userId));
+            const unsub = onSnapshot(q, (snapshot) => {
+                loader.style.display = 'none'; listContainer.innerHTML = '';
+                if (snapshot.empty) { 
+                    listContainer.innerHTML = '<p class="text-gray-600 col-span-full text-center">You have no flats assigned yet.</p>'; 
+                    return; 
+                }
+                snapshot.forEach(doc => {
+                    const flat = doc.data(); const flatId = doc.id;
+                    listContainer.innerHTML += `
+                        <div class="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+                            <div class="flex items-center space-x-4">
+                                <div class="flex-shrink-0 w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center"><i data-feather="home" class="w-6 h-6"></i></div>
+                                <div>
+                                    <h3 class="text-xl font-semibold text-gray-900">${flat.condominiumName || 'Unnamed Flat'}</h3>
+                                    <p class="text-gray-500">${flat.address || 'No address'}</p>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-gray-200 flex justify-start items-center space-x-2">
+                                <button onclick="handleViewFlatReports('${flatId}', '${(flat.condominiumName || 'Unnamed Flat').replace(/'/g, "\\'")}')" class="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center space-x-1">
+                                    <i data-feather="clipboard" class="w-4 h-4"></i><span>View Reports</span>
+                                </button>
+                            </div>
+                        </div>`;
+                }); 
+                feather.replace();
+            }, (err) => { 
+                showError("Error loading flats: " + err.message); 
+                loader.style.display = 'none'; 
+            });
+            appState.unsubscribers.push(unsub);
+        }
+
+        function renderAllReports() {
+            const listContainer = document.getElementById('manager-reports-list');
+            const loader = document.getElementById('manager-dashboard-loader');
+            loader.style.display = 'none';
+
+            let reportsArray = Object.values(allReports);
+
+            const { filterYear, filterMonth } = appState;
+
+            const filteredReports = reportsArray.filter(report => {
+                const cleaningDate = report.data.cleaningDate?.toDate();
+                if (!cleaningDate) {
+                    return false; 
+                }
+                
+                const reportYear = cleaningDate.getFullYear();
+                const reportMonth = cleaningDate.getMonth(); // 0-11
+
+                const yearMatch = (filterYear === 'ALL' || reportYear === filterYear);
+                const monthMatch = (filterMonth === 'ALL' || reportMonth === filterMonth);
+
+                return yearMatch && monthMatch;
+            });
+
+            if (filteredReports.length === 0) {
+                if (reportsArray.length > 0) {
+                    listContainer.innerHTML = '<p class="text-gray-600 text-center">No reports match the selected filter.</p>';
+                } else {
+                    listContainer.innerHTML = '<p class="text-gray-600 text-center">No reports found for your managed properties.</p>';
+                }
+                return;
+            }
+
+            filteredReports.sort((a, b) => {
+                const dateA = a.data.cleaningDate?.toDate() || 0;
+                const dateB = b.data.cleaningDate?.toDate() || 0;
+                return dateB - dateA;
+            });
+
+            listContainer.innerHTML = '';
+            filteredReports.forEach(report => {
+                listContainer.innerHTML += createReportCardHTML(report.data, report.id, true);
+            });
+            feather.replace();
+        }
+
+        async function renderManagerDashboard(userId) {
+            const loader = document.getElementById('manager-dashboard-loader');
+            loader.style.display = 'block';
+
+            appState.filterYear = 'ALL';
+            appState.filterMonth = 'ALL';
+            
+            const filterYearSelect = document.getElementById('filter-year');
+            const filterMonthSelect = document.getElementById('filter-month');
+            if (filterYearSelect) filterYearSelect.value = 'ALL';
+            if (filterMonthSelect) filterMonthSelect.value = 'ALL';
+
+
+            clearAllListeners(); 
+            allReports = {}; 
+
+            const condosQuery = query(collection(db, "condominiums"), where("managerUid", "==", userId));
+
+            const unsubCondos = onSnapshot(condosQuery, (condoSnapshot) => {
+                clearReportListeners(); 
+                allReports = {};
+
+                const condoNamesContainer = document.getElementById('manager-condo-names');
+                condoNamesContainer.innerHTML = '';
+
+                if (condoSnapshot.empty) {
+                    loader.style.display = 'none';
+                    condoNamesContainer.innerHTML = '<p class="text-sm text-gray-500">You are not assigned to any condominiums yet.</p>';
+                    renderAllReports(); 
+                    return;
+                }
+
+                const condoNames = [];
+
+                condoSnapshot.forEach(condoDoc => {
+                    const condoId = condoDoc.id;
+                    const condoData = condoDoc.data();
+                    const condoName = condoData.condominiumName || 'Unnamed Condo';
+                    condoNames.push(condoName);
+
+                    const reportsQuery = query(
+                        collection(db, "condominiums", condoId, "cleaning_reports"),
+                        orderBy("cleaningDate", "desc") 
+                    );
+
+                    const unsubReport = onSnapshot(reportsQuery, (reportsSnapshot) => {
+                        reportsSnapshot.docChanges().forEach((change) => {
+                            if (change.type === "removed") {
+                                delete allReports[change.doc.id];
+                            } else {
+                                const reportData = change.doc.data();
+                                reportData.condoId = condoId; 
+                                if (!reportData.condominiumName) {
+                                    reportData.condominiumName = condoName; 
+                                }
+                                allReports[change.doc.id] = { id: change.doc.id, data: reportData };
+                            }
+                        });
+                        renderAllReports();
+
+                    }, (err) => {
+                        showError(`Error loading reports for condo ${condoId}: ${err.message}`);
+                    });
+
+                    reportListeners.push(unsubReport);
+                });
+
+                if (condoNames.length > 0) {
+                    condoNamesContainer.innerHTML = condoNames.map(name =>
+                        `<span class="bg-purple-100 text-purple-800 text-sm font-medium px-3 py-1 rounded-full">${name}</span>`
+                    ).join('');
+                }
+
+            }, (err) => {
+                showError("Error fetching your condominiums: " + err.message);
+                loader.style.display = 'none';
+            });
+
+            appState.unsubscribers.push(unsubCondos); 
+        }
+
+        function renderReportDetailsView(flatId) { 
+            const listContainer = document.getElementById('report-list-container'); 
+            const loader = document.getElementById('report-details-loader'); 
+            loader.style.display = 'block'; 
+            clearAllListeners();
+            
+            const q = query(collection(db, "condominiums", flatId, "cleaning_reports"), orderBy("cleaningDate", "desc"));
+            const unsub = onSnapshot(q, (snapshot) => {
+                loader.style.display = 'none'; 
+                listContainer.innerHTML = ''; 
+                if (snapshot.empty) { 
+                    listContainer.innerHTML = '<p class="text-gray-600 text-center text-lg mt-10">No cleaning reports have been submitted for this flat yet.</p>'; 
+                    return; 
+                }
+                snapshot.forEach(doc => { 
+                    listContainer.innerHTML += createReportCardHTML(doc.data(), doc.id, false); 
+                }); 
+                feather.replace();
+            }, (err) => { 
+                showError("Error loading reports: " + err.message); 
+                loader.style.display = 'none'; 
+            }); 
+            appState.unsubscribers.push(unsub);
+        }
+
+        function renderComplaintView(flatId, flatName) {
+            const listContainer = document.getElementById('complaint-list-container');
+            const loader = document.getElementById('complaint-list-loader');
+            loader.style.display = 'block';
+
+            document.getElementById('complaint-condo-id').value = flatId;
+            document.getElementById('complaint-text').value = '';
+
+            clearAllListeners();
+
+            const q = query(
+                collection(db, "condominiums", flatId, "complaints"),
+                orderBy("submittedAt", "desc")
+            );
+
+            const unsub = onSnapshot(q, (snapshot) => {
+                loader.style.display = 'none';
+                listContainer.innerHTML = '';
+                if (snapshot.empty) {
+                    listContainer.innerHTML = '<p class="text-gray-500 text-center">No complaints or notes submitted yet.</p>';
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const complaint = doc.data();
+                    const submittedDate = complaint.submittedAt?.toDate().toLocaleString('en-US', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' }) || 'No date';
+                    const status = complaint.status || 'Note'; 
+                    const isOwner = complaint.submittedByRole?.includes('OWNER'); 
+                    
+                    const statusColor = isOwner ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'; 
+                    const statusText = isOwner ? (status === 'New' ? 'Complaint (New)' : 'Complaint') : 'Note'; 
+                    const submittedBy = complaint.submittedByName || (isOwner ? 'Owner' : 'Manager'); 
+
+                    listContainer.innerHTML += `
+                        <div class="border border-gray-200 rounded-lg p-3 ${isOwner ? 'bg-red-50' : 'bg-blue-50'}">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm font-medium text-gray-600">${submittedDate} by ${submittedBy}</span>
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${statusColor}">${statusText}</span>
+                            </div>
+                            <p class="text-gray-800 break-words">${complaint.complaintText}</p>
+                        </div>`;
+                });
+            }, (err) => {
+                showError("Error loading history: " + err.message + " (Check Firestore Index: complaints/submittedAt DESC)"); 
+                loader.style.display = 'none';
+            });
+            appState.unsubscribers.push(unsub);
+        }
+
+        // --- 4. COMMON COMPONENT: Report Card ---
+
+        function createReportCardHTML(reportData, reportId, isManagerView) {
+            const cleaningDate = reportData.cleaningDate?.toDate();
+            const formattedDate = cleaningDate ? cleaningDate.toLocaleString('en-US', { year:'numeric', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : 'No date';
+            
+            const tasksHTML = (reportData.tasksCompleted || []).map(taskKey => `<li class="flex items-center space-x-2"><i data-feather="check" class="w-4 h-4 text-green-600"></i><span class="text-gray-700">${translateTask(taskKey)}</span></li>`).join('') || '<li class="text-gray-500">No tasks listed.</li>';
+
+            let statusChipHTML = reportData.reviewedByManager
+                ? `<div class="flex-shrink-0 flex items-center space-x-1 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium"><i data-feather="star" class="w-4 h-4 text-yellow-500 fill-current"></i><span>${reportData.managerRating || 0} Points</span></div>`
+                : `<div class="flex-shrink-0 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">Pending Review</div>`;
+
+            let feedbackHTML = '';
+            if (reportData.reviewedByManager) {
+                feedbackHTML = `
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <h5 class="text-sm font-semibold text-gray-500 uppercase mb-2">Manager's Feedback</h5>
+                        <div class="flex items-center mb-2">
+                            ${[1, 2, 3, 4, 5].map(star => `<i data-feather="star" class="w-5 h-5 ${star <= reportData.managerRating ? 'text-yellow-500 fill-current' : 'text-gray-300'}"></i>`).join('')}
+                        </div>
+                        <p class="text-gray-700 italic break-words">"${reportData.managerFeedback || 'No feedback left.'}"</p>
+                    </div>`;
+            }
+
+            let reviewFormHTML = '';
+            if (isManagerView && !reportData.reviewedByManager) {
+                const condoId = reportData.condoId;
+                 reviewFormHTML = `
+                    <div class="mt-4 pt-4 border-t border-purple-200 bg-purple-50 p-4 rounded-lg border border-purple-200">
+                        <h5 class="text-md font-semibold text-purple-800 mb-3">Submit Your Review</h5>
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Rating (1-5 Stars)</label>
+                            <div class="flex space-x-1 star-rating">
+                                ${[1, 2, 3, 4, 5].map(star => `<input type="radio" id="star-${star}-${reportId}" name="rating-${reportId}" value="${star}" class="sr-only"><label for="star-${star}-${reportId}" title="${star} stars" class="star-label" data-value="${star}"><i data-feather="star" class="w-6 h-6 star-icon"></i></label>`).join('')}
+                            </div>
+                        </div>
+                        <div class="mb-3"><label for="feedback-${reportId}" class="block text-sm font-medium text-gray-700 mb-1">Feedback (Optional)</label><textarea id="feedback-${reportId}" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"></textarea></div>
+                        <button data-report-id="${reportId}" data-condo-id="${condoId}" class="submit-review-btn w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition duration-300 ${!condoId ? 'opacity-50 cursor-not-allowed' : ''}" ${!condoId ? 'disabled' : ''}>Submit Review</button>
+                    </div>`;
+            }
+
+            let complaintButtonHTML = '';
+            if (isManagerView) {
+                 const condoId = reportData.condoId;
+                 const condoName = reportData.condominiumName || 'this Condo';
+                 if (condoId) {
+                      complaintButtonHTML = `
+                         <button onclick="handleViewFlatComplaints('${condoId}', '${condoName.replace(/'/g, "\\'")}')" class="text-sm font-medium text-purple-600 hover:text-purple-800 flex items-center space-x-1 mt-3 pt-3 border-t border-gray-200 w-full justify-center">
+                              <i data-feather="message-square" class="w-4 h-4"></i>
+                              <span>View/Add Notes for ${condoName}</span>
+                         </button>`;
+                 }
+            }
+
+            const flatNameHTML = isManagerView ? `<p class="text-sm font-semibold text-purple-700 mb-1">${reportData.condominiumName || 'Condo Name Missing'}</p>` : '';
+            
+            const staffName = reportData.staffName || 'Unknown Staff';
+            const staffImageUrl = reportData.staffProfileImageUrl;
+            let staffImage;
+            if (staffImageUrl && (staffImageUrl.startsWith('http') || staffImageUrl.includes('imgbb'))) { 
+                staffImage = staffImageUrl; 
+            } else { 
+                const initials = staffName.split(' ').map(n => n[0]).join('').substring(0, 2); 
+                staffImage = `https://placehold.co/100/A9A9A9/FFFFFF?text=${initials}`; 
+            }
+
+            return `
+                <div class="bg-white shadow-lg rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl">
+                    <div class="p-5">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>${flatNameHTML}<h3 class="text-xl font-bold text-gray-900">Report by: ${staffName}</h3><p class="text-sm text-gray-500">${formattedDate}</p></div>
+                            ${statusChipHTML}
+                        </div>
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <img src="${staffImage}" alt="${staffName}" class="w-24 h-24 rounded-lg object-cover flex-shrink-0 bg-gray-100">
+                            <div class="flex-grow">
+                                <h4 class="text-md font-semibold text-gray-800 mb-2">Tasks Completed:</h4>
+                                <ul class="space-y-1 sm:grid sm:grid-cols-2 sm:gap-x-4">
+                                    ${tasksHTML}
+                                </ul>
+                            </div>
+                        </div>
+                        ${feedbackHTML}
+                        ${reviewFormHTML}
+                        ${complaintButtonHTML}
+                    </div>
+                </div>`;
+        }
+
+
+        // --- 5. FORM SUBMISSIONS & CLICKS ---
+
+        document.getElementById('complaint-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const complaintText = document.getElementById('complaint-text').value;
+            const condoId = document.getElementById('complaint-condo-id').value;
+            if (!complaintText.trim()) return showError("Please enter details.");
+            if (!condoId || !auth.currentUser) return showError("Cannot submit. Missing data.");
+
+            const submitBtn = document.getElementById('submit-complaint-btn');
+            const btnText = document.getElementById('complaint-btn-text');
+            const loader = document.getElementById('complaint-loader');
+            btnText.classList.add('hidden'); 
+            loader.classList.remove('hidden'); 
+            submitBtn.disabled = true;
+
+            try {
+                const complaintData = {
+                    complaintText: complaintText.trim(),
+                    condoId: condoId,
+                    submittedByUid: auth.currentUser.uid,
+                    submittedByName: appState.currentUserName, 
+                    submittedByRole: appState.currentUserRole,
+                    status: "Note", 
+                    submittedAt: Timestamp.now()
+                };
+                const complaintCollectionRef = collection(db, "condominiums", condoId, "complaints");
+                await addDoc(complaintCollectionRef, complaintData);
+                showSuccess("Note/Complaint added successfully!");
+                document.getElementById('complaint-text').value = '';
+            } catch (err) {
+                showError("Failed to submit: " + err.message);
+            } finally {
+                btnText.classList.remove('hidden'); 
+                loader.classList.add('hidden'); 
+                submitBtn.disabled = false;
+            }
+        });
+
+        document.body.addEventListener('click', async (e) => {
+            // --- A: Star Rating Click ---
+            const starLabel = e.target.closest('label.star-label');
+            if (starLabel) {
+                e.preventDefault(); 
+                const starContainer = starLabel.closest('.star-rating');
+                if (!starContainer) return;
+                const clickedValue = parseInt(starLabel.dataset.value, 10);
+                const radio = document.getElementById(starLabel.getAttribute('for'));
+                if (radio) radio.checked = true;
+                const allStarLabels = starContainer.querySelectorAll('label.star-label');
+                allStarLabels.forEach(label => {
+                    const icon = label.querySelector('.star-icon');
+                    const starValue = parseInt(label.dataset.value, 10);
+                    if (starValue <= clickedValue) {
+                        icon.classList.add('filled');
+                        const newIcon = feather.icons.star.toSvg({ class: 'w-6 h-6 star-icon filled' });
+                        icon.outerHTML = newIcon;
+                    } else {
+                        icon.classList.remove('filled');
+                        const newIcon = feather.icons.star.toSvg({ class: 'w-6 h-6 star-icon' });
+                        icon.outerHTML = newIcon;
+                    }
+                });
+                return; 
+            }
+
+            // --- B: Submit Review Click ---
+            const submitButton = e.target.closest('.submit-review-btn');
+            if (submitButton) {
+                e.preventDefault();
+                submitButton.disabled = true;
+                submitButton.innerText = 'Submitting...';
+                const { reportId, condoId } = submitButton.dataset;
+                if (!condoId || condoId === 'undefined') {
+                    showError("Cannot submit review: Missing Condominium ID.");
+                    submitButton.disabled = false;
+                    submitButton.innerText = 'Submit Review';
+                    return;
+                }
+                try {
+                    const ratingInput = document.querySelector(`input[name="rating-${reportId}"]:checked`);
+                    const rating = ratingInput ? parseInt(ratingInput.value, 10) : 0;
+                    if (rating === 0) {
+                        showError("Please select a star rating (1-5).");
+                        submitButton.disabled = false;
+                        submitButton.innerText = 'Submit Review';
+                        return;
+                    }
+                    const feedback = document.getElementById(`feedback-${reportId}`).value;
+                    const reportRef = doc(db, "condominiums", condoId, "cleaning_reports", reportId);
+                    await updateDoc(reportRef, {
+                        reviewedByManager: true,
+                        managerRating: rating,
+                        managerFeedback: feedback,
+                        reviewedAt: Timestamp.now(),
+                        reviewedBy: appState.currentUserName
+                    });
+                    showSuccess("Review submitted!");
+                } catch (err) {
+                    showError("Failed to submit review: " + err.message);
+                    submitButton.disabled = false;
+                    submitButton.innerText = 'Submit Review';
+                }
+            }
+        });
+
+
+        // --- APP INITIALIZATION ---
+
+        function populateYearFilter() {
+            const yearSelect = document.getElementById('filter-year');
+            if (!yearSelect) return;
+            const currentYear = new Date().getFullYear();
+            yearSelect.innerHTML = ''; 
+            yearSelect.innerHTML += '<option value="ALL">All Years</option>';
+            for (let i = 0; i < 5; i++) {
+                const year = currentYear - i;
+                yearSelect.innerHTML += `<option value="${year}">${year}</option>`;
+            }
+        }
+
+        document.getElementById('filter-year').addEventListener('change', (e) => {
+            appState.filterYear = e.target.value === 'ALL' ? 'ALL' : parseInt(e.target.value, 10);
+            renderAllReports();
+        });
+
+        document.getElementById('filter-month').addEventListener('change', (e) => {
+            appState.filterMonth = e.target.value === 'ALL' ? 'ALL' : parseInt(e.target.value, 10);
+            renderAllReports();
+        });
+
+        populateYearFilter();
+        showView('role-selection-view');
+        hideLoader();
+
+    </script>
+</body>
+</html>
