@@ -516,7 +516,7 @@
             appState.unsubscribers.push(unsub);
         }
 
-        function renderAllReports() {
+        async function renderAllReports() {
             const listContainer = document.getElementById('manager-reports-list');
             const loader = document.getElementById('manager-dashboard-loader');
             loader.style.display = 'none';
@@ -555,10 +555,14 @@
                 return dateB - dateA;
             });
 
-            listContainer.innerHTML = '';
-            filteredReports.forEach(report => {
-                listContainer.innerHTML += createReportCardHTML(report.data, report.id, true);
+            // --- MODIFICATION: Use Promise.all to wait for async HTML creation ---
+            const reportPromises = filteredReports.map(report => {
+                return createReportCardHTML(report.data, report.id, true);
             });
+            const reportsHtml = await Promise.all(reportPromises);
+            listContainer.innerHTML = reportsHtml.join('');
+            // --- END MODIFICATION ---
+
             feather.replace();
         }
 
@@ -620,7 +624,7 @@
                                 allReports[change.doc.id] = { id: change.doc.id, data: reportData };
                             }
                         });
-                        renderAllReports();
+                        renderAllReports(); // This will run async
 
                     }, (err) => {
                         showError(`Error loading reports for condo ${condoId}: ${err.message}`);
@@ -650,16 +654,24 @@
             clearAllListeners();
             
             const q = query(collection(db, "condominiums", flatId, "cleaning_reports"), orderBy("cleaningDate", "desc"));
-            const unsub = onSnapshot(q, (snapshot) => {
+            
+            // --- MODIFICATION: Make callback async to await HTML creation ---
+            const unsub = onSnapshot(q, async (snapshot) => {
                 loader.style.display = 'none'; 
                 listContainer.innerHTML = ''; 
                 if (snapshot.empty) { 
                     listContainer.innerHTML = '<p class="text-gray-600 text-center text-lg mt-10">No cleaning reports have been submitted for this flat yet.</p>'; 
                     return; 
                 }
-                snapshot.forEach(doc => { 
-                    listContainer.innerHTML += createReportCardHTML(doc.data(), doc.id, false); 
-                }); 
+
+                // --- MODIFICATION: Use Promise.all to wait for async HTML creation ---
+                const reportPromises = snapshot.docs.map(doc => {
+                    return createReportCardHTML(doc.data(), doc.id, false);
+                });
+                const reportsHtml = await Promise.all(reportPromises);
+                listContainer.innerHTML = reportsHtml.join('');
+                // --- END MODIFICATION ---
+
                 feather.replace();
             }, (err) => { 
                 showError("Error loading reports: " + err.message); 
@@ -718,7 +730,8 @@
 
         // --- 4. COMMON COMPONENT: Report Card ---
 
-        function createReportCardHTML(reportData, reportId, isManagerView) {
+        // --- MODIFICATION: Made function async to fetch staff profile ---
+        async function createReportCardHTML(reportData, reportId, isManagerView) {
             const cleaningDate = reportData.cleaningDate?.toDate();
             const formattedDate = cleaningDate ? cleaningDate.toLocaleString('en-US', { year:'numeric', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : 'No date';
             
@@ -773,9 +786,29 @@
             const flatNameHTML = isManagerView ? `<p class="text-sm font-semibold text-purple-700 mb-1">${reportData.condominiumName || 'Condo Name Missing'}</p>` : '';
             
             const staffName = reportData.staffName || 'Unknown Staff';
-            const staffImageUrl = reportData.staffProfileImageUrl;
+            
+            // --- START MODIFICATION: Fetch staff image ---
+            let staffImageUrl = reportData.staffProfileImageUrl; // Check if it's already in the report
+            const staffUid = reportData.staffUid; // **ASSUMPTION**: Your report doc has `staffUid`
+
+            // If we don't have the URL but we *do* have the staff's ID, fetch it from the 'users' collection
+            if (!staffImageUrl && staffUid) {
+                try {
+                    // **ASSUMPTION**: Your staff collection is named 'users'
+                    const userDocRef = doc(db, "users", staffUid); 
+                    const userDoc = await getDoc(userDocRef);
+                    if (userDoc.exists()) {
+                        // **ASSUMPTION**: The field in your 'users' doc is 'profileImageUrl'
+                        staffImageUrl = userDoc.data().profileImageUrl; 
+                    }
+                } catch (err) {
+                    console.warn(`Could not fetch profile image for staff ${staffUid}:`, err);
+                }
+            }
+            // --- END MODIFICATION ---
+
             let staffImage;
-            if (staffImageUrl && (staffImageUrl.startsWith('http') || staffImageUrl.includes('imgbb'))) { 
+            if (staffImageUrl && (staffImageUrl.startsWith('http') || staffImageUrl.includes('imgbb') || staffImageUrl.includes('i.ibb.co'))) { 
                 staffImage = staffImageUrl; 
             } else { 
                 const initials = staffName.split(' ').map(n => n[0]).join('').substring(0, 2); 
